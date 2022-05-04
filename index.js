@@ -1,11 +1,11 @@
 const ethers = require('ethers');  
-const { AgreementAddress, AgreementContractAbi } = require('./config');  
-const contractList = [];
-const setContractState=[];
+const { AgreementAddress, AgreementContractAbi, AgreementAbi } = require('./config');  
+var contractList = [];
+var setContractState=[];
 
 
 const createAgreement = async (buyerAddress,sellerAddress,price,stakePercentBuyer,stakePercentSeller,title, description) => { 
-    setLoading(true);
+    
     const formattedPrice = ethers.utils.parseEther(price);  
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner(); 
@@ -33,7 +33,7 @@ const createAgreement = async (buyerAddress,sellerAddress,price,stakePercentBuye
     }
   };
 
-  const getContractList=(address)=>{ 
+  const getContractList= async(address)=>{ 
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const agreementContract = new ethers.Contract(
@@ -43,10 +43,24 @@ const createAgreement = async (buyerAddress,sellerAddress,price,stakePercentBuye
     );
     let agreAddress = await agreementContract.getAgreementByParties(
         address
-    );
-
-  contractList(agreAddress.slice().reverse());
-  return  agreAddress;
+    );  
+    contractList=[...agreAddress]; 
+      agreementContract.on("CreateAgreement", (buyer, seller, price, address,title, description) => {
+        if (
+          props.currentAccount.toLowerCase() === buyer.toLowerCase() ||
+          props.currentAccount.toLowerCase() === seller.toLowerCase()
+        ) { 
+          contractList.map((prevState) => { 
+            if (!prevState.includes(address)) return [address, ...prevState];
+            return prevState;
+          });
+        } 
+    })
+    console.log(agreAddress);
+    if(contractList != null && contractList.length != 0 ){
+        return contractList;
+    } 
+  return  contractList;
   }
 
   const cleanAgreement = (agreementDetails) => {
@@ -69,7 +83,7 @@ const createAgreement = async (buyerAddress,sellerAddress,price,stakePercentBuye
     return cleanAgreement;
   };
 
-  const agreementLists= (contractAddress)=>{
+  const agreementLists= async(contractAddress)=>{
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const agreementContract = new ethers.Contract(
@@ -79,14 +93,17 @@ const createAgreement = async (buyerAddress,sellerAddress,price,stakePercentBuye
     );
 
     let agreementDetails = await agreementContract.getStatus(); 
-    setContractState(cleanAgreement(agreementDetails));  
+    let list = cleanAgreement(agreementDetails);
+     setContractState.push(list);  
 
     agreementContract.on("AgreementStateChanged", (buyer, seller, state) => {
-        setContractState(cleanAgreement(state));
+       let data= cleanAgreement(state);
+        setContractState.push(data);  
       });
+      return setContractState;
   } 
 
-  const stake = async (contractAddress,contractState) => {  
+  const stake = async (contractAddress,contractState, userAdd) => {  
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
 
@@ -100,7 +117,7 @@ const createAgreement = async (buyerAddress,sellerAddress,price,stakePercentBuye
     try {
       let per;
       let stake = Number(contractState.price);
-      if (isBuyer) {
+      if (contractState.buyer === userAdd) {
         per = Number(contractState.statePercent);
       } else {
         per = Number(contractState.sellerPercent);

@@ -1,0 +1,1 @@
+const {getContractList} = require('./index');

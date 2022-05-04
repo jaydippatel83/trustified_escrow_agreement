@@ -1,6 +1,6 @@
 {
   "name": "trustified_escrow_agreement",
-  "version": "1.0.0",
+  "version": "2.5.9",
   "description": "create trustified escrow agreement",
   "main": "index.js",
   "scripts": {
